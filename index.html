@@ -1,0 +1,174 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ambient Scene Soundboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    color: #fff;
+  }
+
+  #bg1, #bg2 {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: opacity 1.5s ease-in-out;
+  }
+
+  #bg2 { opacity: 0; }
+
+  .panel {
+    position: absolute;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 20px;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    padding: 12px 22px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 16px;
+  }
+
+  button:hover {
+    background: rgba(255,255,255,0.25);
+  }
+
+  @media (max-width: 600px) {
+    button {
+      flex: 1 1 calc(50% - 10px);
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="bg1"></div>
+<div id="bg2"></div>
+
+<div class="panel">
+  <button onclick="switchScene('sauron')">Sauron</button>
+  <button onclick="switchScene('chaos')">Chaos</button>
+  <button onclick="switchScene('freefolk')">Freefolk</button>
+  <button onclick="switchScene('stewards')">Stewards</button>
+</div>
+
+<script>
+/* ------------------------------
+   SCENES
+------------------------------ */
+const scenes = {
+  sauron:   { audio: new Audio("sauron.mp3"),   image: "sauron.png" },
+  chaos:    { audio: new Audio("chaos.mp3"),    image: "chaos.png" },
+  freefolk: { audio: new Audio("freefolk.mp3"), image: "freefolk.png" },
+  stewards: { audio: new Audio("stewards.mp3"), image: "stewards.png" }
+};
+
+// Set looping and initial volume
+for (const key in scenes) {
+  let a = scenes[key].audio;
+  a.loop = true;
+  a.volume = 0;
+}
+
+let currentAudio = null;
+let audioUnlocked = false;
+let bgToggle = true;
+
+/* ------------------------------
+   AUDIO UNLOCK ON FIRST CLICK
+------------------------------ */
+document.addEventListener("click", () => {
+  if (!audioUnlocked) {
+    audioUnlocked = true;
+
+    // Start default scene once unlocked
+    switchScene("sauron");
+  }
+}, { once: true });
+
+/* ------------------------------
+   SWITCH SCENE
+------------------------------ */
+function switchScene(name) {
+  const { audio, image } = scenes[name];
+
+  // Update background (fade images)
+  const bgA = document.getElementById("bg1");
+  const bgB = document.getElementById("bg2");
+
+  if (bgToggle) {
+    bgB.style.backgroundImage = `url('${image}')`;
+    bgB.style.opacity = 1;
+    bgA.style.opacity = 0;
+  } else {
+    bgA.style.backgroundImage = `url('${image}')`;
+    bgA.style.opacity = 1;
+    bgB.style.opacity = 0;
+  }
+  bgToggle = !bgToggle;
+
+  if (!audioUnlocked) return;
+
+  // Fade in the next audio
+  audio.currentTime = 0;
+  audio.play().catch(err => console.log("Playback blocked:", err));
+  fade(audio, 0, 1, 2000);
+
+  // Fade out previous audio
+  if (currentAudio && currentAudio !== audio) {
+    fade(currentAudio, currentAudio.volume, 0, 2000, () => {
+      currentAudio.pause();
+    });
+  }
+
+  currentAudio = audio;
+}
+
+/* ------------------------------
+   FADE FUNCTION
+------------------------------ */
+function fade(audio, start, end, duration, onDone) {
+  const step = (end - start) / (duration / 50);
+  let vol = start;
+
+  audio.volume = vol;
+
+  const interval = setInterval(() => {
+    vol += step;
+    audio.volume = Math.min(Math.max(vol, 0), 1);
+
+    if ((step > 0 && vol >= end) || (step < 0 && vol <= end)) {
+      clearInterval(interval);
+      audio.volume = end;
+      if (onDone) onDone();
+    }
+  }, 50);
+}
+
+// Set the initial background before any click
+document.getElementById("bg1").style.backgroundImage = "url('sauron.png')";
+</script>
+
+</body>
+</html>
