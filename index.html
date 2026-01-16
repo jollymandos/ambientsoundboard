@@ -3,22 +3,21 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Ambient Scene Soundboard</title>
+<title>Ambient Soundboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
   body {
     margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    color: #fff;
+    font-family: Arial, sans-serif;
+    background: #000;
+    color: white;
     overflow: hidden;
   }
 
-  /* Background Layers */
   #bg1, #bg2 {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    inset: 0;
     background-size: cover;
     background-position: center;
     transition: opacity 1.5s ease-in-out;
@@ -26,39 +25,32 @@
 
   #bg2 { opacity: 0; }
 
-  /* Control Panel */
   .panel {
     position: absolute;
-    bottom: 30px;
+    bottom: 25px;
     left: 50%;
     transform: translateX(-50%);
+    padding: 14px 18px;
     background: rgba(0,0,0,0.45);
     backdrop-filter: blur(8px);
-    padding: 15px 20px;
     border-radius: 12px;
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
   }
 
   button {
-    padding: 12px 22px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
+    padding: 12px 20px;
     font-size: 16px;
-    color: #fff;
+    color: white;
+    border: none;
+    border-radius: 8px;
     background: rgba(255,255,255,0.15);
-    transition: background 0.2s;
+    cursor: pointer;
   }
 
-  button:hover { background: rgba(255,255,255,0.25); }
-
-  @media (max-width: 600px) {
-    button {
-      flex: 1 1 calc(50% - 10px);
-      text-align: center;
-    }
+  button:hover {
+    background: rgba(255,255,255,0.25);
   }
 </style>
 </head>
@@ -69,87 +61,111 @@
 
 <div class="panel">
   <button onclick="switchScene('sauron')">Sauron</button>
-  <button onclick="switchScene('freefolk')">Freefolk</button>
   <button onclick="switchScene('chaos')">Chaos</button>
+  <button onclick="switchScene('freefolk')">Freefolk</button>
   <button onclick="switchScene('stewards')">Stewards</button>
 </div>
 
 <script>
+/* ---------------------------------------------------------
+   SCENE DEFINITIONS (use your real filenames)
+--------------------------------------------------------- */
 const scenes = {
-  sauron: {
-    audio: "sauron.mp3",
-    image: "sauron.png"
-  },
-  freefolk: {
-    audio: "freefolk.mp3",
-    image: "freefolk.png"
-  },
-  chaos: {
-    audio: "chaos.mp3",
-    image: "chaos.png"
-  },
-  stewards: {
-    audio: "stewards.mp3",
-    image: "stewards.png"
-  },
+  sauron:   { audio: new Audio("sauron.mp3"),   image: "sauron.png" },
+  chaos:    { audio: new Audio("chaos.mp3"),    image: "chaos.png" },
+  freefolk: { audio: new Audio("freefolk.mp3"), image: "freefolk.png" },
+  stewards: { audio: new Audio("stewards.mp3"), image: "stewards.png" }
 };
 
+/* ---------------------------------------------------------
+   INITIAL AUDIO SETTINGS
+--------------------------------------------------------- */
+for (const key in scenes) {
+  const a = scenes[key].audio;
+  a.loop = true;
+  a.volume = 0;
+}
+
+/* ---------------------------------------------------------
+   GLOBAL STATE
+--------------------------------------------------------- */
 let currentAudio = null;
 let audioUnlocked = false;
 let bgToggle = true;
 
-
-function switchScene(name) {
-    const scene = scenes[name];
-    const nextAudio = scene.audio;
-
-    // --- 3:28pm
-    // --- capture old audio BEFORE changing anything
-    const oldAudio = currentAudio;
-
-    // --- background fade stays the same
-    // ... (your bg fade code here)
-
-    if (!audioUnlocked) {
-        currentAudio = nextAudio;
-        return;
-    }
-
-    // Start new audio
-    nextAudio.currentTime = 0;
-    nextAudio.play().catch(e => console.log(e));
-    fade(nextAudio, 0, 1, 2000);
-
-    // Fade out old audio SAFELY
-    if (oldAudio && oldAudio !== nextAudio) {
-        fade(oldAudio, oldAudio.volume, 0, 2000, () => {
-            oldAudio.pause();   // pauses ONLY the old one
-        });
-    }
-
-    // Update pointer AFTER fade-out capture
-    currentAudio = nextAudio;
-}
-
-
+/* ---------------------------------------------------------
+   FADE FUNCTION
+--------------------------------------------------------- */
 function fade(audio, start, end, duration, onDone) {
-  const step = (end - start) / (duration / 50);
+  const steps = duration / 50;
+  const delta = (end - start) / steps;
   let v = start;
-  audio.volume = v;
 
-  const interval = setInterval(() => {
-    v += step;
-    audio.volume = Math.min(Math.max(v, 0), 1);
+  const id = setInterval(() => {
+    v += delta;
+    audio.volume = Math.min(1, Math.max(0, v));
 
-    if ((step > 0 && v >= end) || (step < 0 && v <= end)) {
-      clearInterval(interval);
+    if ((delta > 0 && v >= end) || (delta < 0 && v <= end)) {
+      clearInterval(id);
       audio.volume = end;
       if (onDone) onDone();
     }
   }, 50);
 }
+
+/* ---------------------------------------------------------
+   SWITCH SCENE
+--------------------------------------------------------- */
+function switchScene(name) {
+  const scene = scenes[name];
+  const nextAudio = scene.audio;
+
+  /* --- BACKGROUND FADE --- */
+  const bgA = document.getElementById("bg1");
+  const bgB = document.getElementById("bg2");
+
+  if (bgToggle) {
+    bgB.style.backgroundImage = `url(${scene.image})`;
+    bgB.style.opacity = 1;
+    bgA.style.opacity = 0;
+  } else {
+    bgA.style.backgroundImage = `url(${scene.image})`;
+    bgA.style.opacity = 1;
+    bgB.style.opacity = 0;
+  }
+  bgToggle = !bgToggle;
+
+  /* --- AUDIO LOGIC --- */
+
+  // If audio not unlocked yet, this click will unlock it.
+  if (!audioUnlocked) {
+    audioUnlocked = true;
+  }
+
+  // Capture the old audio BEFORE assigning currentAudio (critical!)
+  const oldAudio = currentAudio;
+
+  // Start the new audio
+  nextAudio.currentTime = 0;
+  nextAudio.play().catch(e => console.log("play blocked:", e));
+  fade(nextAudio, 0, 1, 2000);
+
+  // Fade out old audio SAFELY
+  if (oldAudio && oldAudio !== nextAudio) {
+    fade(oldAudio, oldAudio.volume, 0, 2000, () => {
+      oldAudio.pause();  // only pauses the real old audio
+    });
+  }
+
+  // Assign AFTER capture
+  currentAudio = nextAudio;
+}
+
+/* ---------------------------------------------------------
+   INITIAL BACKGROUND
+--------------------------------------------------------- */
+document.getElementById("bg1").style.backgroundImage = "url('sauron.jpg')";
 </script>
+
 </body>
 </html>
-
-
