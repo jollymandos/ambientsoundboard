@@ -97,39 +97,39 @@ const scenes = {
 let currentAudio = null;
 let bgToggle = true;
 
+
 function switchScene(name) {
-  const scene = scenes[name];
+    const scene = scenes[name];
+    const nextAudio = scene.audio;
 
-  // Background fade
-  const bgA = document.getElementById("bg1");
-  const bgB = document.getElementById("bg2");
+    // --- 3:28pm
+    // --- capture old audio BEFORE changing anything
+    const oldAudio = currentAudio;
 
-  if (bgToggle) {
-    bgB.style.backgroundImage = `url('${scene.image}')`;
-    bgB.style.opacity = 1;
-    bgA.style.opacity = 0;
-  } else {
-    bgA.style.backgroundImage = `url('${scene.image}')`;
-    bgA.style.opacity = 1;
-    bgB.style.opacity = 0;
-  }
-  bgToggle = !bgToggle;
+    // --- background fade stays the same
+    // ... (your bg fade code here)
 
-  // Audio fade
-  const nextAudio = new Audio(scene.audio);
-  nextAudio.volume = 0;
-  nextAudio.loop = true;
-  nextAudio.play();
+    if (!audioUnlocked) {
+        currentAudio = nextAudio;
+        return;
+    }
 
-  fade(nextAudio, 0, 1, 2000);
+    // Start new audio
+    nextAudio.currentTime = 0;
+    nextAudio.play().catch(e => console.log(e));
+    fade(nextAudio, 0, 1, 2000);
 
-  if (currentAudio) {
-    fade(currentAudio, currentAudio.volume, 0, 2000, () => {
-      currentAudio.pause();
-    });
-  }
-  currentAudio = nextAudio;
+    // Fade out old audio SAFELY
+    if (oldAudio && oldAudio !== nextAudio) {
+        fade(oldAudio, oldAudio.volume, 0, 2000, () => {
+            oldAudio.pause();   // pauses ONLY the old one
+        });
+    }
+
+    // Update pointer AFTER fade-out capture
+    currentAudio = nextAudio;
 }
+
 
 function fade(audio, start, end, duration, onDone) {
   const step = (end - start) / (duration / 50);
@@ -150,3 +150,4 @@ function fade(audio, start, end, duration, onDone) {
 </script>
 </body>
 </html>
+
